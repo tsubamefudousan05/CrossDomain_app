@@ -70,7 +70,7 @@ if not API_KEY:
 
 # チームワークアプリと同じ最新SDKクライアント
 client = genai.Client(api_key=API_KEY)
-MODEL_NAME = "gemini-2.5-flash"
+MODEL_NAME = "gemini-3.8-flash"
 
 # ==========================================
 # 4. サイドバー設定
