@@ -6,7 +6,6 @@ CrossDomain Engine
 import time
 import streamlit as st
 from google import genai
-from google.genai import types
 
 # ==========================================
 # 1. ページ基本設定 & デザイン
@@ -68,9 +67,14 @@ if not API_KEY:
     st.error("Secrets に GEMINI_API_KEY が設定されていません。Settings > Secrets を確認してください。")
     st.stop()
 
-# チームワークアプリと同じ最新SDKクライアント
 client = genai.Client(api_key=API_KEY)
 MODEL_NAME = "gemini-3.8-flash"
+
+# セッション状態の初期化（結果保持用）
+if "analysis_result" not in st.session_state:
+    st.session_state.analysis_result = None
+if "current_query" not in st.session_state:
+    st.session_state.current_query = ""
 
 # ==========================================
 # 4. サイドバー設定
@@ -96,6 +100,7 @@ with st.sidebar:
     st.markdown("---")
     if st.button("ログアウト（再ロック）", use_container_width=True):
         st.session_state.authenticated = False
+        st.session_state.analysis_result = None
         st.rerun()
 
 # ==========================================
@@ -126,7 +131,6 @@ if run_button:
         st.stop()
 
     status_container = st.container()
-    result_container = st.container()
     
     with status_container:
         status_box = st.status("🔍 先例逆算プロセスを実行中...", expanded=True)
@@ -137,7 +141,6 @@ if run_button:
             time.sleep(0.6)
             st.write("3. 4軸多次元一致率スコアを積算中...")
 
-    # プロンプトの組み立て
     mode_text = "異分野越境（生物進化、軍事史、宇宙工学、生態系、伝統工芸など遠隔ドメイン）" if "異分野" in mode else "近接ドメイン（製造業、IT・SaaS、航空、医療安全、小売などビジネス隣接分野）"
 
     prompt = f"""
@@ -173,13 +176,37 @@ if run_button:
             model=MODEL_NAME,
             contents=prompt,
         )
-        
         status_box.update(label="✅ アナロジー逆算が完了しました！", state="complete", expanded=False)
-        
-        with result_container:
-            st.markdown("---")
-            st.markdown(response.text)
+        # セッションに結果を保存
+        st.session_state.analysis_result = response.text
+        st.session_state.current_query = user_query
             
     except Exception as e:
         status_box.update(label="❌ エラーが発生しました", state="error", expanded=True)
         st.error(f"解析中にエラーが発生しました: {e}")
+
+# ==========================================
+# 7. 結果描画 & データ出力セクション
+# ==========================================
+if st.session_state.analysis_result:
+    st.markdown("---")
+    st.markdown(st.session_state.analysis_result)
+    st.divider()
+    
+    # ダウンロード用Markdownコンテンツの構築
+    export_content = f"""# CrossDomain Engine 発想レポート
+- **出力日時**: {time.strftime('%Y-%m-%d %H:%M:%S')}
+- **入力課題**: {st.session_state.current_query}
+- **探査モード**: {mode}
+
+---
+{st.session_state.analysis_result}
+"""
+    # データ出力ボタン
+    st.download_button(
+        label="📥 解析レポートをMarkdownでダウンロード (.md)",
+        data=export_content.encode("utf-8"),
+        file_name=f"crossdomain_report_{time.strftime('%Y%m%d_%H%M%S')}.md",
+        mime="text/markdown",
+        use_container_width=True
+    )
