@@ -1,8 +1,8 @@
 """
-CrossDomain Engine - Master Harmony & Soul Edition
+CrossDomain Engine - Master Harmony & Continuous Pipeline Edition
 - 🏛️ 帝国総研：基底直交探索 ＆ 独立監査レイヤー
-- ⚖️ 最高裁判所：構造化JSONによる拒絶権（Circuit Breaker）＆ 完全例外保護 ＆ 免責条項
-- 🌸 仙人茶会：第5基底（生活知・偏愛贈与）＆ アンドン型対話 ＆ 魂の昇華アルゴリズム（Constraint-to-Prestige）
+- ⚖️ 最高裁判所：構造化JSONによるテールリスク定量監査 ＆ 完全例外保護 ＆ 免責条項
+- 🌸 仙人茶会：第5基底（生活知・偏愛贈与）＆ アンドン数値可視化 ＆ 魂の昇華アルゴリズム（Constraint-to-Prestige）
 """
 
 import time
@@ -52,9 +52,16 @@ CUSTOM_CSS = """
         border-radius: 6px;
         margin-bottom: 0.8rem;
     }
-    .andon-box {
+    .andon-card-warning {
         border-left: 5px solid #f59e0b;
         background-color: #291e0a;
+        padding: 1.2rem;
+        border-radius: 6px;
+        margin-bottom: 1.2rem;
+    }
+    .andon-card-safe {
+        border-left: 5px solid #10b981;
+        background-color: #064e3b;
         padding: 1.2rem;
         border-radius: 6px;
         margin-bottom: 1.2rem;
@@ -124,15 +131,15 @@ RED_TEAM_SCHEMA = {
         "sabotage_vulnerabilities": {"type": "STRING", "description": "サボタージュおよび脱法脆弱性"},
         "tail_risk_analysis": {"type": "STRING", "description": "テールリスクの定量的分析"},
         "tail_risk_score": {"type": "INTEGER", "description": "破滅確率・テールリスク指数 (0〜100の整数)"},
-        "veto_recommended": {"type": "BOOLEAN", "description": "アンドンを引いて一時停止・差戻しをすべきか"},
-        "andon_inquiry": {"type": "STRING", "description": "品質を高めて再設計するための『現場への愛ある問いかけ』"}
+        "andon_status": {"type": "STRING", "description": "アンドン状態判定（安全/要注意/厳重警戒）"},
+        "andon_inquiry": {"type": "STRING", "description": "品質を高めて現場を守るための『カイゼンの愛ある問いかけ』"}
     },
     "required": [
         "survivorship_bias_analysis", 
         "sabotage_vulnerabilities", 
         "tail_risk_analysis", 
         "tail_risk_score", 
-        "veto_recommended",
+        "andon_status",
         "andon_inquiry"
     ]
 }
@@ -161,11 +168,10 @@ def reset_analysis_state():
     st.session_state.current_query = ""
 
 def get_gemini_client(api_key: str):
-    """GenAI クライアントの初期化"""
     return genai.Client(api_key=api_key)
 
 def call_gemini_safe(client, prompt: str, json_schema=None, max_retries: int = 3, base_delay: float = 1.5) -> str:
-    """指数バックオフと構造的例外処理を備えた安全なAPI呼び出しラッパー"""
+    """指数バックオフ付き安全API呼び出し"""
     last_exception = None
     config_params = {}
     
@@ -209,12 +215,11 @@ st.set_page_config(
 st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
 init_session_state()
 
-# Fail-Closed型 認証チェック
 APP_PASSWORD = st.secrets.get("APP_PASSWORD")
 API_KEY = st.secrets.get("GEMINI_API_KEY", "")
 
 if not APP_PASSWORD:
-    st.error("【重大な設定エラー】：Secrets に APP_PASSWORD が設定されていません。Fail-Closed原則により起動を拒絶します。")
+    st.error("【重大な設定エラー】：Secrets に APP_PASSWORD が設定されていません。")
     st.stop()
 
 if not API_KEY:
@@ -260,15 +265,6 @@ with st.sidebar:
         index=0
     )
     
-    risk_threshold = st.slider(
-        "🛡️ アンドン遮断（VETO）発動閾値",
-        min_value=50,
-        max_value=95,
-        value=80,
-        step=5,
-        help="Red Teamが判定したテールリスク指数がこの値を超えた場合、品質保護のためアンドンが引かれ再設計を促します。"
-    )
-    
     st.markdown("---")
     st.caption(
         "**【基底直交5大コア】**\n"
@@ -277,9 +273,9 @@ with st.sidebar:
         "・γ：法理統御・市場設計\n"
         "・δ：深層心理・認知幾何\n"
         "・ε：生活知・偏愛贈与（魂の基底）\n\n"
-        "**【独立監査・アンドン機構】**\n"
-        "・Critical Red Team ✕ Andon-UX\n"
-        "・Constraint-to-Prestige 昇華変換"
+        "**【常時完走・アンドン監査】**\n"
+        "・Critical Red Team リアルタイムリスク評価\n"
+        "・アンドン数値の定量可視化 ＆ 先回り防壁構築"
     )
     
     st.markdown("---")
@@ -310,10 +306,9 @@ user_query = st.text_area(
 run_button = st.button("🚀 5大直交コア出動 ＆ 調和発案パイプラインを実行", type="primary", use_container_width=True)
 
 # ==============================================================================
-# 7. パイプライン実行ロジック
+# 7. パイプライン実行ロジック（停止せず完走する仕様）
 # ==============================================================================
 def execute_investigator(inv, query: str, current_mode: str):
-    """単一調査エージェントの独立実行"""
     prompt = (
         f"あなたは【{inv['name']}】です。\n"
         f"【担当領域】：{inv['focus']}\n"
@@ -357,13 +352,13 @@ if run_button:
                 for inv, text in st.session_state.research_reports
             ])
 
-            # Phase 2: Critical Red Team 監査（構造化JSON）
-            st.write("🛡️ [第2フェーズ：冷徹な監査] Critical Red Team による破滅リスク・サボタージュ検証...")
+            # Phase 2: Critical Red Team 監査（停止せずスコアを算出）
+            st.write("🛡️ [第2フェーズ：冷徹な監査] Critical Red Team によるアンドンリスク指数算定中...")
             red_team_prompt = (
                 "あなたは【Critical Red Team：破滅確率・対照群・公序良俗 統合監査官】です。\n"
-                "5つの直交エージェントが持ち寄った以下の確定先例候補を冷徹にストレステストし、破滅確率およびサボタージュ脆弱性を監査してください。\n"
-                "重大な法令違反、現場の疲弊・反逆、またはモラルハザードの確率が看過できない場合は、躊躇なく veto_recommended を true に設定してください。\n"
-                "また、単に拒絶するだけでなく「現場がより良い品質に至るための愛ある問い（andon_inquiry）」を必ず提示してください。\n\n"
+                "5つの直交エージェントが持ち寄った確定先例候補を冷徹にストレステストし、破滅確率およびサボタージュ脆弱性を監査してください。\n"
+                "この監査結果は後続のソリューション策定で『先回り防御』のために活用されます。\n"
+                "現場がより高い品質と愛ある調和に至るための『カイゼンの問い（andon_inquiry）』を必ず提示してください。\n\n"
                 f"【検討課題】\n{user_query}\n\n"
                 f"【5大コアの採掘報告】\n{aggregated_research}\n"
             )
@@ -373,42 +368,22 @@ if run_button:
             st.session_state.audit_data = audit_json
 
             risk_val = audit_json.get("tail_risk_score", 0)
-            is_veto = audit_json.get("veto_recommended", False) or (risk_val >= risk_threshold)
-            
-            st.write(f"  ✓ 監査完了：テールリスク指数 `{risk_val}/100` ｜ アンドン判定: `{is_veto}`")
+            st.write(f"  ✓ 監査完了：テールリスク指数 `{risk_val}/100` （判定: {audit_json.get('andon_status')}）")
 
-            # Circuit Breaker: アンドン型インターロック
-            if is_veto:
-                status_box.update(label="🔔 【アンドン作動】品質保護のため、設計プロセスを一時停止しました", state="error", expanded=True)
-                st.markdown(
-                    f"<div class='andon-box'>"
-                    f"<h3>🔔 アンドン（Andon）が引かれました</h3>"
-                    f"<p><b>「アンドンは現場を処罰するためのものじゃない。仲間を信じ、品質を守り、全員でより良いものをつくるために引くんだ。」</b></p>"
-                    f"<hr style='border-color: #78350f;'>"
-                    f"<ul>"
-                    f"<li><b>検出リスク指数:</b> <code>{risk_val}/100</code>（設定閾値: <code>{risk_threshold}</code>）</li>"
-                    f"<li><b>懸念される急所:</b> {audit_json.get('sabotage_vulnerabilities')}</li>"
-                    f"<li><b>カイゼンのための問い:</b> <i>「{audit_json.get('andon_inquiry')}」</i></li>"
-                    f"</ul>"
-                    f"<p>この先例のまま進むと現場に無理なしわ寄せが生じる恐れがあります。前提条件を整えるか、問い直して再挑戦してください。</p>"
-                    f"</div>",
-                    unsafe_allow_html=True
-                )
-                st.stop()
-
-            # Phase 3: 魂の昇華・最高次統合
-            st.write("🧠 [第3フェーズ：魂の受肉] 冷徹な監査要塞の上に、生活実感と熱狂のソリューションを逆算中...")
+            # Phase 3: 魂の昇華・最高次統合（アンドン数値を織り込んで完走）
+            st.write(f"🧠 [第3フェーズ：魂の受肉] アンドン指数 ({risk_val}/100) を防御壁へ反転させ、最終ソリューションを構築中...")
             master_prompt = (
                 "あなたは卓越したアナロジカル・イノベーションの最高責任者であり、世の繁栄と人々の笑顔を願う事業アーキテクトです。\n"
                 "5大直交コアが持ち寄った確定先例と、Critical Red Team の冷徹な監査結果を統合し、"
-                "「鉄壁のバックエンド規律（法理・計数・安全性）」と「思わず人が笑顔で自発的に動いてしまうフロントエンド（愛嬌・美意識・熱狂）」を完璧に両立させた至高のソリューション案を策定してください。\n\n"
+                "「鉄壁のバックエンド規律（安全性・リスクヘッジ）」と「思わず人が笑顔で自発的に動いてしまうフロントエンド（愛嬌・美意識・熱狂）」を完璧に両立させた至高のソリューション案を策定してください。\n\n"
                 f"【解決したい課題】\n{user_query}\n\n"
                 f"【5大コアによる確定先例】\n{aggregated_research}\n\n"
                 "【Critical Red Team 構造化監査報告】\n"
                 f"- 生存バイアス分析: {audit_json.get('survivorship_bias_analysis')}\n"
                 f"- サボタージュ脆弱性: {audit_json.get('sabotage_vulnerabilities')}\n"
                 f"- テールリスク分析: {audit_json.get('tail_risk_analysis')}\n"
-                f"- 確定テールリスク指数: {risk_val}/100\n\n"
+                f"- 確定テールリスク指数: {risk_val}/100\n"
+                f"- カイゼンのための愛ある問い: {audit_json.get('andon_inquiry')}\n\n"
                 "---\n"
                 "以下の【仙人茶会・魂の昇華プロトコル】を厳格に適用して出力してください：\n\n"
                 "### 1. 課題の深層力学と二律背反（ジレンマ）の完全定義\n"
@@ -416,7 +391,7 @@ if run_button:
                 "### 2. 厳選アンカー事例によるアナロジー構造転移\n"
                 "- 採掘結果（特にAgent εの生活知や偏愛・贈与の力学を含む）から最も打率の高い2〜3個のギミックを厳選し、今回の課題へどう美しく転移できるかを解説。\n\n"
                 "### 3. 【Constraint-to-Prestige】熱狂と調和を生む具体的3大ソリューション\n"
-                "- **バックエンドの規律**：Red Teamが指摘した脆弱性を冷徹に先回り防御する仕組み（完全な安全性）。\n"
+                f"- **アンドン防御（リスク指数 {risk_val}点への回答）**：Red Teamが指摘したサボタージュ脆弱性を冷徹に先回り防御する安全設計。\n"
                 "- **フロントエンドの愛嬌**：人々が「監視されている」と感じることなく、自ら進んで調和と行動に向かってしまう【儀式（Ritual）・美意識・お互い様（贈与）】のUX設計。\n"
                 "- 脆弱性を単に塞ぐだけでなく、「だからこそ参加したくなる限定性・誇り」へ反転させた具体的アイデア。\n\n"
                 "### 4. 実行ロードマップ & 魂の問いかけ（生活実感バリデータ）\n"
@@ -431,7 +406,7 @@ if run_button:
             
             total_sec = time.time() - t_start
             status_box.update(
-                label=f"✅ 帝国総研 ✕ 最高裁 ✕ 仙人茶会 調和パイプライン完了（総所要時間: {total_sec:.1f}秒）", 
+                label=f"✅ パイプライン完走（アンドン指数: {risk_val}/100 ｜ 総所要時間: {total_sec:.1f}秒）", 
                 state="complete", 
                 expanded=False
             )
@@ -446,30 +421,47 @@ if run_button:
 if st.session_state.analysis_result:
     st.markdown("---")
     
+    # アンドン数値のカード常時表示（警告・安全を色分け）
+    if st.session_state.audit_data:
+        ad = st.session_state.audit_data
+        score = ad.get("tail_risk_score", 0)
+        card_class = "andon-card-warning" if score >= 70 else "andon-card-safe"
+        icon = "⚠️" if score >= 70 else "✅"
+        
+        st.markdown(
+            f"<div class='{card_class}'>"
+            f"<h4>🔔 アンドン監査診断結果 ｜ リスク指数: <code>{score}/100</code> ({ad.get('andon_status', '診断完了')})</h4>"
+            f"<p><b>■ 懸念される急所（サボタージュ脆弱性）:</b><br>{ad.get('sabotage_vulnerabilities')}</p>"
+            f"<p><b>■ カイゼンのための愛ある問い:</b><br><i>「{ad.get('andon_inquiry')}」</i></p>"
+            f"<small>※本システムは上記リスクを第3フェーズで先回り防御（インターロック化）した上で、以下のソリューションを導出しています。</small>"
+            f"</div>",
+            unsafe_allow_html=True
+        )
+
+    st.markdown("### 🎯 統合ソリューション案（魂の受肉・調和昇華済み）")
+    st.markdown(st.session_state.analysis_result)
+    st.divider()
+
+    # 詳細ログのアコーディオン
     with st.expander("📂 5大直交コアの【生リサーチ報告】を確認する", expanded=False):
         for inv, text in st.session_state.research_reports:
             st.markdown(f"#### {inv['name']}")
             st.markdown(f"<div class='investigator-card'>{text}</div>", unsafe_allow_html=True)
             
     if st.session_state.audit_data:
-        with st.expander("🛡️ Critical Red Team による【構造化監査データ】を確認する", expanded=False):
+        with st.expander("🛡️ Critical Red Team による【詳細監査データ】を確認する", expanded=False):
             ad = st.session_state.audit_data
             st.markdown(
                 f"<div class='audit-card'>"
-                f"<b>■ テールリスク指数:</b> <code>{ad.get('tail_risk_score')}/100</code> ｜ <b>アンドン推奨:</b> <code>{ad.get('veto_recommended')}</code><br><br>"
+                f"<b>■ テールリスク指数:</b> <code>{ad.get('tail_risk_score')}/100</code><br><br>"
                 f"<b>■ 生存バイアス・対照群検定:</b><br>{ad.get('survivorship_bias_analysis')}<br><br>"
                 f"<b>■ サボタージュ・脱法脆弱性:</b><br>{ad.get('sabotage_vulnerabilities')}<br><br>"
-                f"<b>■ テールリスク分析:</b><br>{ad.get('tail_risk_analysis')}<br><br>"
-                f"<b>■ カイゼンのための愛ある問い:</b><br><i>「{ad.get('andon_inquiry')}」</i>"
+                f"<b>■ テールリスク分析:</b><br>{ad.get('tail_risk_analysis')}"
                 f"</div>",
                 unsafe_allow_html=True
             )
     
-    st.markdown("### 🎯 統合ソリューション案（魂の受肉・調和昇華済み）")
-    st.markdown(st.session_state.analysis_result)
-    st.divider()
-    
-    # ダウンロード用Markdownコンテンツの構築（文字列結合でSyntaxErrorを根絶）
+    # ダウンロード用Markdownコンテンツの構築
     all_reports_md = "\n\n---\n\n".join([
         f"## {inv['name']}\n{text}" for inv, text in st.session_state.research_reports
     ])
@@ -483,6 +475,7 @@ if st.session_state.analysis_result:
         f"# CrossDomain Engine 完全調和発想レポート\n"
         f"- **出力日時**: {time.strftime('%Y-%m-%d %H:%M:%S')}\n"
         f"- **入力課題**: {st.session_state.current_query}\n"
+        f"- **アンドンリスク指数**: {st.session_state.audit_data.get('tail_risk_score', 0)}/100\n"
         f"- **探査モード**: {mode}\n\n"
         f"---\n"
         f"# ■ 法的免責事項（不可逆条項）\n"
